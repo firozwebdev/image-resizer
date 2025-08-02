@@ -5,6 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "vite",
+    "dev:netlify": "netlify dev",
+    "dev:client-only": "vite --port 5173",
     "build": "vite build",
     "preview": "vite preview"
   },

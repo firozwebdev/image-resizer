@@ -64,6 +64,9 @@
 
     <!-- Main Content -->
     <main class="w-full px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Development Notice -->
+      <DevelopmentNotice />
+
       <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
         <!-- Left Column: Upload & Settings -->
         <div class="xl:col-span-1 space-y-6">
@@ -234,9 +237,14 @@ import StatsDashboard from "./components/StatsDashboard.vue";
 import ImagePreview from "./components/ImagePreview.vue";
 import ImagePreviewModal from "./components/ImagePreviewModal.vue";
 import ImageComparison from "./components/ImageComparison.vue";
+import DevelopmentNotice from "./components/DevelopmentNotice.vue";
 
 // Utilities
 import { batchProcessImages, formatFileSize } from "./utils/imageProcessor.js";
+import {
+  processImagesHybrid,
+  getAdvancedAnalytics,
+} from "./services/serverProcessor.js";
 import {
   downloadAsZip,
   createPreviewUrl,
@@ -392,13 +400,24 @@ const processImages = async () => {
       ...advancedSettings.value,
     };
 
-    const results = await batchProcessImages(
+    // Use hybrid processing for optimal performance
+    const processingResult = await processImagesHybrid(
       selectedFiles.value,
       combinedSettings,
       (progressData) => {
         progress.value = progressData;
+
+        // Show processing method info
+        if (progressData.stage) {
+          console.log(`Processing: ${progressData.stage}`);
+          if (progressData.reasoning) {
+            console.log(`Reasoning: ${progressData.reasoning}`);
+          }
+        }
       }
     );
+
+    const results = processingResult.results;
 
     // Create preview URLs for successful results
     results.forEach((result) => {

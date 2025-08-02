@@ -1,8 +1,47 @@
 <template>
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-      Processing Statistics
-    </h3>
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+        Processing Statistics
+      </h3>
+
+      <!-- Analytics Source Indicator -->
+      <div class="flex items-center space-x-2">
+        <div
+          v-if="isLoadingServerAnalytics"
+          class="flex items-center space-x-2 text-sm text-gray-500"
+        >
+          <div
+            class="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full"
+          ></div>
+          <span>Loading advanced analytics...</span>
+        </div>
+
+        <div
+          v-else-if="stats.isServerGenerated"
+          class="flex items-center space-x-2 text-sm text-green-600 dark:text-green-400"
+        >
+          <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+          <span>Server Analytics</span>
+        </div>
+
+        <div
+          v-else
+          class="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400"
+        >
+          <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+          <span>Client Analytics</span>
+        </div>
+
+        <div
+          v-if="serverAnalyticsError"
+          class="text-xs text-orange-500"
+          :title="serverAnalyticsError"
+        >
+          ⚠️ Fallback mode
+        </div>
+      </div>
+    </div>
 
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
       <!-- Total Files -->
@@ -305,7 +344,7 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import {
   PhotoIcon,
   CheckCircleIcon,
@@ -316,6 +355,7 @@ import {
   ExclamationTriangleIcon,
 } from "@heroicons/vue/24/outline";
 import { formatFileSize } from "../utils/imageProcessor.js";
+import { getAdvancedAnalytics } from "../services/serverProcessor.js";
 
 const props = defineProps({
   results: {
@@ -326,9 +366,62 @@ const props = defineProps({
     type: Number,
     default: 0,
   },
+  useServerAnalytics: {
+    type: Boolean,
+    default: true,
+  },
 });
 
+// Server analytics state
+const serverAnalytics = ref(null);
+const isLoadingServerAnalytics = ref(false);
+const serverAnalyticsError = ref(null);
+
+// Watch for changes and fetch server analytics
+watch(
+  () => [props.results, props.processingTime],
+  async () => {
+    if (props.useServerAnalytics && props.results.length > 0) {
+      await fetchServerAnalytics();
+    }
+  },
+  { immediate: true }
+);
+
+// Fetch advanced analytics from server
+async function fetchServerAnalytics() {
+  if (isLoadingServerAnalytics.value) return;
+
+  isLoadingServerAnalytics.value = true;
+  serverAnalyticsError.value = null;
+
+  try {
+    const analytics = await getAdvancedAnalytics(
+      props.results,
+      props.processingTime,
+      "comprehensive"
+    );
+    serverAnalytics.value = analytics;
+  } catch (error) {
+    console.warn("Server analytics failed, using client analytics:", error);
+    serverAnalyticsError.value = error.message;
+    serverAnalytics.value = null;
+  } finally {
+    isLoadingServerAnalytics.value = false;
+  }
+}
+
 const stats = computed(() => {
+  // Use server analytics if available, otherwise fall back to client calculation
+  if (serverAnalytics.value && !serverAnalyticsError.value) {
+    return {
+      ...serverAnalytics.value,
+      isServerGenerated: true,
+      hasAdvancedMetrics: true,
+    };
+  }
+
+  // Fallback to client-side calculation
   const successful = props.results.filter((r) => r.success && r.result);
   const failed = props.results.filter((r) => !r.success);
 
