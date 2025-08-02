@@ -211,9 +211,29 @@
           v-model="settings.backgroundColor"
           type="text"
           class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-          placeholder="#FFFFFF"
+          placeholder="transparent"
         />
       </div>
+    </div>
+
+    <!-- Transparency Info (for PNG/WebP/Keep Original) -->
+    <div
+      v-if="
+        !settings.format ||
+        settings.format === OUTPUT_FORMATS.PNG ||
+        settings.format === OUTPUT_FORMATS.WEBP
+      "
+      class="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800"
+    >
+      <div class="flex items-center space-x-2">
+        <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+        <span class="text-sm font-medium text-green-800 dark:text-green-200">
+          Transparency Preserved
+        </span>
+      </div>
+      <p class="text-xs text-green-600 dark:text-green-300 mt-1">
+        Transparent areas in your images will remain transparent in the output.
+      </p>
     </div>
   </div>
 </template>
@@ -235,7 +255,7 @@ const defaultSettings = {
   format: null, // Will preserve original format by default
   algorithm: RESIZE_ALGORITHMS.LANCZOS,
   maintainAspectRatio: true,
-  backgroundColor: "#FFFFFF",
+  backgroundColor: "transparent", // Default to transparent to preserve PNG transparency
 };
 
 const settings = reactive({ ...defaultSettings });

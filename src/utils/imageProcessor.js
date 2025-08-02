@@ -106,17 +106,18 @@ export function resizeImage(file, options = {}) {
           canvas.width = newDimensions.width;
           canvas.height = newDimensions.height;
 
-          // Only set background for JPEG or when explicitly requested
-          // PNG and WebP should preserve transparency by default
-          if (
+          // Only set background for JPEG or when user explicitly sets a background color
+          // PNG and WebP preserve transparency by default
+          const shouldFillBackground =
             outputFormat === OUTPUT_FORMATS.JPEG ||
-            (backgroundColor !== "transparent" && backgroundColor)
-          ) {
+            (backgroundColor && backgroundColor !== "transparent");
+
+          if (shouldFillBackground) {
             ctx.fillStyle =
               backgroundColor === "transparent" ? "#FFFFFF" : backgroundColor;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
           }
-          // For PNG/WebP with transparent background, leave canvas transparent
+          // For PNG/WebP with transparent/no background, canvas remains transparent
 
           // Apply image smoothing based on algorithm
           applyResizeAlgorithm(ctx, algorithm);
