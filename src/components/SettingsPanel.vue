@@ -19,20 +19,20 @@
       >
         Quick Presets
       </label>
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         <button
           v-for="(preset, key) in PRESET_SIZES"
           :key="key"
           @click="applyPreset(preset)"
           :class="[
-            'p-3 text-sm rounded-lg border transition-all duration-200',
+            'p-3 text-sm rounded-lg border transition-all duration-200 min-h-[60px] flex flex-col justify-center',
             isPresetActive(preset)
               ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
               : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300',
           ]"
         >
-          <div class="font-medium">{{ preset.name }}</div>
-          <div class="text-xs opacity-75">
+          <div class="font-medium text-center truncate">{{ preset.name }}</div>
+          <div class="text-xs opacity-75 text-center">
             {{ preset.width }}×{{ preset.height }}
           </div>
         </button>
@@ -108,19 +108,21 @@
       >
         Output Format
       </label>
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <!-- Keep Original Format Option -->
         <button
           @click="settings.format = null"
           :class="[
-            'p-2 text-sm rounded-lg border transition-all duration-200',
+            'p-3 text-sm rounded-lg border transition-all duration-200 min-h-[70px] flex flex-col justify-center',
             settings.format === null
               ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
               : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300',
           ]"
         >
-          <div class="font-medium">Keep Original</div>
-          <div class="text-xs opacity-75">Preserves transparency</div>
+          <div class="font-medium text-center">Keep Original</div>
+          <div class="text-xs opacity-75 text-center">
+            Preserves transparency
+          </div>
         </button>
 
         <!-- Specific Format Options -->
@@ -129,14 +131,14 @@
           :key="key"
           @click="settings.format = format"
           :class="[
-            'p-2 text-sm rounded-lg border transition-all duration-200',
+            'p-3 text-sm rounded-lg border transition-all duration-200 min-h-[70px] flex flex-col justify-center',
             settings.format === format
               ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
               : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300',
           ]"
         >
-          <div class="font-medium">{{ key }}</div>
-          <div class="text-xs opacity-75">
+          <div class="font-medium text-center">{{ key }}</div>
+          <div class="text-xs opacity-75 text-center">
             {{
               key === "PNG"
                 ? "Supports transparency"

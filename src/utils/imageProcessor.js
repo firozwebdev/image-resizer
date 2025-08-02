@@ -348,11 +348,23 @@ function applyWatermark(ctx, dimensions, watermark) {
  * Format file size for display
  */
 export function formatFileSize(bytes) {
+  // Handle invalid inputs
+  if (bytes == null || isNaN(bytes) || bytes < 0) {
+    return "0 Bytes";
+  }
+
   if (bytes === 0) return "0 Bytes";
 
   const k = 1024;
   const sizes = ["Bytes", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  // Ensure i is within bounds
+  const sizeIndex = Math.min(i, sizes.length - 1);
+
+  return (
+    parseFloat((bytes / Math.pow(k, sizeIndex)).toFixed(2)) +
+    " " +
+    sizes[sizeIndex]
+  );
 }
