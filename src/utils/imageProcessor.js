@@ -26,7 +26,9 @@ export const PRESET_SIZES = {
 };
 
 /**
- * Calculate new dimensions while preserving aspect ratio
+ * Calculate new dimensions based on user requirements
+ * When both width and height are specified, uses exact dimensions (may change aspect ratio)
+ * When only one dimension is specified, calculates the other based on aspect ratio
  */
 export function calculateDimensions(
   originalWidth,
@@ -35,30 +37,27 @@ export function calculateDimensions(
   targetHeight,
   maintainAspectRatio = true
 ) {
-  if (!maintainAspectRatio) {
+  // If both width and height are specified, use exact dimensions
+  // This ensures the image is resized to exactly what the user requested
+  if (targetWidth && targetHeight) {
     return { width: targetWidth, height: targetHeight };
   }
 
+  // If only one dimension is specified, calculate the other based on aspect ratio
   const aspectRatio = originalWidth / originalHeight;
 
-  if (targetWidth && targetHeight) {
-    // Fit within bounds
-    const widthRatio = targetWidth / originalWidth;
-    const heightRatio = targetHeight / originalHeight;
-    const ratio = Math.min(widthRatio, heightRatio);
-
-    return {
-      width: Math.round(originalWidth * ratio),
-      height: Math.round(originalHeight * ratio),
-    };
-  } else if (targetWidth) {
+  if (targetWidth) {
     return {
       width: targetWidth,
-      height: Math.round(targetWidth / aspectRatio),
+      height: maintainAspectRatio
+        ? Math.round(targetWidth / aspectRatio)
+        : targetHeight || originalHeight,
     };
   } else if (targetHeight) {
     return {
-      width: Math.round(targetHeight * aspectRatio),
+      width: maintainAspectRatio
+        ? Math.round(targetHeight * aspectRatio)
+        : targetWidth || originalWidth,
       height: targetHeight,
     };
   }

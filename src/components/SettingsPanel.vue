@@ -75,9 +75,14 @@
 
     <!-- Aspect Ratio -->
     <div class="flex items-center justify-between">
-      <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
-        Maintain Aspect Ratio
-      </label>
+      <div>
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Maintain Aspect Ratio
+        </label>
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          Only applies when width OR height is specified (not both)
+        </p>
+      </div>
       <button
         @click="settings.maintainAspectRatio = !settings.maintainAspectRatio"
         :class="[
