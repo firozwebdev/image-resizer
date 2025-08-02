@@ -22,7 +22,7 @@ export const PRESET_SIZES = {
   MEDIUM: { width: 800, height: 800, name: "Medium" },
   LARGE: { width: 1200, height: 1200, name: "Large" },
   HD: { width: 1920, height: 1080, name: "HD (1920x1080)" },
-  "4K": { width: 3840, height: 2160, name: "4K (3840x2160)" },
+  "4K": { width: 4500, height: 5400, name: "4K (4500x5400)" },
 };
 
 /**
@@ -74,11 +74,14 @@ export function resizeImage(file, options = {}) {
     width,
     height,
     quality = 0.9,
-    format = file.type,
+    format = file.type, // Use original format if not specified
     algorithm = RESIZE_ALGORITHMS.LANCZOS,
     maintainAspectRatio = true,
     backgroundColor = "transparent",
   } = options;
+
+  // If format is null, use the original file format
+  const outputFormat = format || file.type;
 
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -89,7 +92,8 @@ export function resizeImage(file, options = {}) {
       img.onload = () => {
         try {
           const canvas = document.createElement("canvas");
-          const ctx = canvas.getContext("2d");
+          // Ensure alpha channel is preserved for transparency
+          const ctx = canvas.getContext("2d", { alpha: true });
 
           // Calculate new dimensions
           const newDimensions = calculateDimensions(
@@ -103,21 +107,32 @@ export function resizeImage(file, options = {}) {
           canvas.width = newDimensions.width;
           canvas.height = newDimensions.height;
 
-          // Set background if needed
+          // Only set background for JPEG or when explicitly requested
+          // PNG and WebP should preserve transparency by default
           if (
-            format === OUTPUT_FORMATS.JPEG ||
-            backgroundColor !== "transparent"
+            outputFormat === OUTPUT_FORMATS.JPEG ||
+            (backgroundColor !== "transparent" && backgroundColor)
           ) {
             ctx.fillStyle =
               backgroundColor === "transparent" ? "#FFFFFF" : backgroundColor;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
           }
+          // For PNG/WebP with transparent background, leave canvas transparent
 
           // Apply image smoothing based on algorithm
           applyResizeAlgorithm(ctx, algorithm);
 
           // Draw the resized image
           ctx.drawImage(img, 0, 0, newDimensions.width, newDimensions.height);
+
+          // Apply watermark if enabled
+          if (
+            options.watermark &&
+            options.watermark.enabled &&
+            options.watermark.text
+          ) {
+            applyWatermark(ctx, newDimensions, options.watermark);
+          }
 
           // Convert to blob
           canvas.toBlob(
@@ -138,7 +153,7 @@ export function resizeImage(file, options = {}) {
                 reject(new Error("Failed to create blob"));
               }
             },
-            format,
+            outputFormat,
             quality
           );
         } catch (error) {
@@ -263,6 +278,70 @@ export function getImageMetadata(file) {
     reader.onerror = () => reject(new Error("Failed to read file"));
     reader.readAsDataURL(file);
   });
+}
+
+/**
+ * Apply watermark to canvas
+ */
+function applyWatermark(ctx, dimensions, watermark) {
+  const { text, position = "bottom-right", opacity = 0.7 } = watermark;
+
+  // Save current context state
+  ctx.save();
+
+  // Set watermark style
+  const fontSize = Math.max(
+    16,
+    Math.min(dimensions.width, dimensions.height) * 0.03
+  );
+  ctx.font = `${fontSize}px Arial, sans-serif`;
+  ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+  ctx.strokeStyle = `rgba(0, 0, 0, ${opacity * 0.5})`;
+  ctx.lineWidth = 2;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+
+  // Measure text
+  const textMetrics = ctx.measureText(text);
+  const textWidth = textMetrics.width;
+  const textHeight = fontSize;
+
+  // Calculate position
+  let x, y;
+  const padding = Math.max(10, fontSize * 0.5);
+
+  switch (position) {
+    case "top-left":
+      x = padding;
+      y = padding;
+      break;
+    case "top-right":
+      x = dimensions.width - textWidth - padding;
+      y = padding;
+      break;
+    case "bottom-left":
+      x = padding;
+      y = dimensions.height - textHeight - padding;
+      break;
+    case "bottom-right":
+      x = dimensions.width - textWidth - padding;
+      y = dimensions.height - textHeight - padding;
+      break;
+    case "center":
+      x = (dimensions.width - textWidth) / 2;
+      y = (dimensions.height - textHeight) / 2;
+      break;
+    default:
+      x = dimensions.width - textWidth - padding;
+      y = dimensions.height - textHeight - padding;
+  }
+
+  // Draw text with stroke for better visibility
+  ctx.strokeText(text, x, y);
+  ctx.fillText(text, x, y);
+
+  // Restore context state
+  ctx.restore();
 }
 
 /**

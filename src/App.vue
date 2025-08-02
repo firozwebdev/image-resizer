@@ -45,6 +45,23 @@
       </div>
     </header>
 
+    <!-- Progress Tracker (Top) -->
+    <div
+      v-if="isProcessing"
+      class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-lg sticky top-16 z-40 py-4"
+    >
+      <div class="w-full px-4 sm:px-6 lg:px-8">
+        <ProgressTracker
+          :progress="progress"
+          :results="processedResults"
+          :is-visible="isProcessing"
+          :can-cancel="isProcessing"
+          :start-time="processingStartTime"
+          @cancel="cancelProcessing"
+        />
+      </div>
+    </div>
+
     <!-- Main Content -->
     <main class="w-full px-4 sm:px-6 lg:px-8 py-8">
       <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
@@ -85,21 +102,8 @@
           </div>
         </div>
 
-        <!-- Right Column: Progress & Results -->
-        <div class="xl:col-span-3 space-y-6">
-          <!-- Progress Tracker -->
-          <div ref="progressSection">
-            <ProgressTracker
-              v-if="isProcessing || processedResults.length > 0"
-              :progress="progress"
-              :results="processedResults"
-              :is-visible="isProcessing"
-              :can-cancel="isProcessing"
-              :start-time="processingStartTime"
-              @cancel="cancelProcessing"
-            />
-          </div>
-
+        <!-- Right Column: Results -->
+        <div class="xl:col-span-3 space-y-6" ref="progressSection">
           <!-- Stats Dashboard -->
           <StatsDashboard
             v-if="processedResults.length > 0"
@@ -373,20 +377,24 @@ const processImages = async () => {
   processingStartTime.value = Date.now();
   processedResults.value = [];
 
-  // Scroll to progress section
+  // Scroll to top to show progress bar
   setTimeout(() => {
-    if (progressSection.value) {
-      progressSection.value.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   }, 100);
 
   try {
+    // Merge resize settings with advanced settings
+    const combinedSettings = {
+      ...resizeSettings.value,
+      ...advancedSettings.value,
+    };
+
     const results = await batchProcessImages(
       selectedFiles.value,
-      resizeSettings.value,
+      combinedSettings,
       (progressData) => {
         progress.value = progressData;
       }

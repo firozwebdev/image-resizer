@@ -103,7 +103,22 @@
       >
         Output Format
       </label>
-      <div class="grid grid-cols-3 gap-2">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <!-- Keep Original Format Option -->
+        <button
+          @click="settings.format = null"
+          :class="[
+            'p-2 text-sm rounded-lg border transition-all duration-200',
+            settings.format === null
+              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+              : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300',
+          ]"
+        >
+          <div class="font-medium">Keep Original</div>
+          <div class="text-xs opacity-75">Preserves transparency</div>
+        </button>
+
+        <!-- Specific Format Options -->
         <button
           v-for="(format, key) in OUTPUT_FORMATS"
           :key="key"
@@ -115,13 +130,22 @@
               : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300',
           ]"
         >
-          {{ key }}
+          <div class="font-medium">{{ key }}</div>
+          <div class="text-xs opacity-75">
+            {{
+              key === "PNG"
+                ? "Supports transparency"
+                : key === "WebP"
+                ? "Modern format"
+                : "Smaller file size"
+            }}
+          </div>
         </button>
       </div>
     </div>
 
     <!-- Quality Slider -->
-    <div v-if="settings.format !== OUTPUT_FORMATS.PNG">
+    <div v-if="settings.format && settings.format !== OUTPUT_FORMATS.PNG">
       <label
         class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3"
       >
@@ -203,7 +227,7 @@ const defaultSettings = {
   width: null,
   height: null,
   quality: 0.9,
-  format: OUTPUT_FORMATS.JPEG,
+  format: null, // Will preserve original format by default
   algorithm: RESIZE_ALGORITHMS.LANCZOS,
   maintainAspectRatio: true,
   backgroundColor: "#FFFFFF",
