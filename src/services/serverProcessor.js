@@ -42,10 +42,24 @@ export async function processImageOnServer(file, options = {}) {
 
     if (!response.ok) {
       const error = await response.json();
+
+      // Check if it's a development environment error (503 status)
+      if (
+        response.status === 503 &&
+        error.error?.includes("development environment")
+      ) {
+        throw new Error(`DEV_UNAVAILABLE: ${error.error}`);
+      }
+
       throw new Error(error.error || "Server processing failed");
     }
 
     const result = await response.json();
+
+    // Check for development fallback response
+    if (!result.success && result.fallbackToClient) {
+      throw new Error(`DEV_UNAVAILABLE: ${result.error}`);
+    }
 
     if (!result.success) {
       throw new Error(result.error || "Processing failed");
@@ -134,10 +148,24 @@ export async function batchProcessImagesOnServer(
 
       if (!response.ok) {
         const error = await response.json();
+
+        // Check if it's a development environment error (503 status)
+        if (
+          response.status === 503 &&
+          error.error?.includes("development environment")
+        ) {
+          throw new Error(`DEV_UNAVAILABLE: ${error.error}`);
+        }
+
         throw new Error(error.error || "Batch processing failed");
       }
 
       const batchResult = await response.json();
+
+      // Check for development fallback response
+      if (!batchResult.success && batchResult.fallbackToClient) {
+        throw new Error(`DEV_UNAVAILABLE: ${batchResult.error}`);
+      }
 
       if (!batchResult.success) {
         throw new Error(batchResult.error || "Batch processing failed");
@@ -298,16 +326,31 @@ export async function checkServerHealth() {
   try {
     const startTime = Date.now();
 
+    // Test with a minimal POST request to check if Sharp is available
     const response = await fetch(`${API_BASE}/image-processor`, {
-      method: "OPTIONS",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        imageData:
+          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+        options: { width: 1, height: 1 },
+        metadata: {
+          filename: "test.png",
+          originalSize: 100,
+          type: "image/png",
+        },
+      }),
     });
 
     const responseTime = Date.now() - startTime;
 
-    // Check if it's a development environment error
-    if (response.status === 503) {
-      const errorData = await response.json().catch(() => ({}));
-      if (errorData.error?.includes("development environment")) {
+    if (response.ok) {
+      const testData = await response.json();
+
+      // Check if it's a development environment fallback
+      if (testData.fallbackToClient || testData.developmentMode) {
         return {
           available: false,
           responseTime,
@@ -317,6 +360,15 @@ export async function checkServerHealth() {
           error: "Server functions not available in development",
         };
       }
+
+      // Server is working properly
+      return {
+        available: true,
+        responseTime,
+        status: response.status,
+        recommendation: responseTime < 1000 ? "server" : "client",
+        isDevelopment: false,
+      };
     }
 
     return {
@@ -349,10 +401,33 @@ export async function getOptimalProcessingMethod(files, options = {}) {
   // Check server health
   const serverHealth = await checkServerHealth();
 
+  // If server is unavailable or in development, always prefer client
+  if (!serverHealth.available || serverHealth.isDevelopment) {
+    return {
+      recommendation: "client",
+      scores: { server: 0, client: 100 },
+      factors: {
+        serverAvailable: serverHealth.available,
+        isDevelopment: serverHealth.isDevelopment,
+        fileCount,
+        totalSizeMB: totalSize / (1024 * 1024),
+        avgFileSizeMB: avgFileSize / (1024 * 1024),
+        isLargeFormat:
+          options.format === "png" || options.algorithm === "lanczos",
+        isComplexProcessing:
+          options.watermark?.enabled || options.quality < 0.7,
+      },
+      reasoning: serverHealth.isDevelopment
+        ? "Development environment detected - using client processing"
+        : "Server not available - using client processing",
+    };
+  }
+
   // Decision factors
   const factors = {
     serverAvailable: serverHealth.available,
     serverResponseTime: serverHealth.responseTime,
+    isDevelopment: serverHealth.isDevelopment,
     fileCount,
     totalSizeMB: totalSize / (1024 * 1024),
     avgFileSizeMB: avgFileSize / (1024 * 1024),
@@ -375,6 +450,7 @@ export async function getOptimalProcessingMethod(files, options = {}) {
 
   // Client advantages
   if (!factors.serverAvailable) clientScore += 50;
+  if (factors.isDevelopment) clientScore += 30; // Prefer client in development
   if (factors.serverResponseTime > 3000) clientScore += 20;
   if (factors.fileCount <= 3) clientScore += 15;
   if (factors.totalSizeMB < 20) clientScore += 10;
@@ -409,6 +485,7 @@ function generateRecommendationReasoning(recommendation, factors) {
       );
   } else {
     if (!factors.serverAvailable) reasons.push("Server is not available");
+    if (factors.isDevelopment) reasons.push("Development environment detected");
     if (factors.serverResponseTime > 3000)
       reasons.push("Server response time is too slow");
     if (factors.fileCount <= 3)
@@ -450,16 +527,37 @@ export async function processImagesHybrid(
     try {
       results = await batchProcessImagesOnServer(files, options, onProgress);
     } catch (error) {
-      console.warn("Server processing failed, falling back to client:", error);
+      const isDevelopmentError = error.message.includes("DEV_UNAVAILABLE");
 
-      if (onProgress) {
-        onProgress({
-          completed: 0,
-          total: files.length,
-          percentage: 0,
-          stage: "Falling back to client processing",
-          warning: "Server processing failed",
-        });
+      if (isDevelopmentError) {
+        console.log(
+          "Development environment detected, using client processing"
+        );
+
+        if (onProgress) {
+          onProgress({
+            completed: 0,
+            total: files.length,
+            percentage: 0,
+            stage: "Using client processing (development mode)",
+            info: "Server functions not available locally",
+          });
+        }
+      } else {
+        console.warn(
+          "Server processing failed, falling back to client:",
+          error
+        );
+
+        if (onProgress) {
+          onProgress({
+            completed: 0,
+            total: files.length,
+            percentage: 0,
+            stage: "Falling back to client processing",
+            warning: "Server processing failed",
+          });
+        }
       }
 
       // Fallback to client processing

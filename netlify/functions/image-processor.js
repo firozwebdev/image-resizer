@@ -34,15 +34,17 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    // Check if Sharp is available
+    // Check if Sharp is available - if not, provide client-side fallback instructions
     if (!sharp) {
       return {
-        statusCode: 503,
+        statusCode: 200,
         headers,
         body: JSON.stringify({
-          error:
-            "Image processing service unavailable in development environment",
-          suggestion: "Deploy to Netlify for server-side processing",
+          success: false,
+          fallbackToClient: true,
+          error: "Server processing unavailable in development",
+          message: "Please use client-side processing",
+          developmentMode: true,
         }),
       };
     }
