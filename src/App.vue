@@ -6,7 +6,7 @@
     <header
       class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50"
     >
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="w-full px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
           <div class="flex items-center space-x-3">
             <div class="p-2 bg-blue-600 rounded-lg">
@@ -46,10 +46,10 @@
     </header>
 
     <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <main class="w-full px-4 sm:px-6 lg:px-8 py-8">
+      <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
         <!-- Left Column: Upload & Settings -->
-        <div class="lg:col-span-1 space-y-6">
+        <div class="xl:col-span-1 space-y-6">
           <!-- File Upload -->
           <FileUpload @files-selected="handleFilesSelected" />
 
@@ -57,6 +57,13 @@
           <SettingsPanel
             v-if="selectedFiles.length > 0"
             @settings-changed="handleSettingsChanged"
+          />
+
+          <!-- Advanced Settings -->
+          <AdvancedSettings
+            v-if="selectedFiles.length > 0"
+            :output-format="resizeSettings.format"
+            @settings-changed="handleAdvancedSettingsChanged"
           />
 
           <!-- Process Button -->
@@ -79,16 +86,27 @@
         </div>
 
         <!-- Right Column: Progress & Results -->
-        <div class="lg:col-span-2 space-y-6">
+        <div class="xl:col-span-3 space-y-6">
           <!-- Progress Tracker -->
-          <ProgressTracker
-            v-if="isProcessing || processedResults.length > 0"
-            :progress="progress"
+          <div ref="progressSection">
+            <ProgressTracker
+              v-if="isProcessing || processedResults.length > 0"
+              :progress="progress"
+              :results="processedResults"
+              :is-visible="isProcessing"
+              :can-cancel="isProcessing"
+              :start-time="processingStartTime"
+              @cancel="cancelProcessing"
+            />
+          </div>
+
+          <!-- Stats Dashboard -->
+          <StatsDashboard
+            v-if="processedResults.length > 0"
             :results="processedResults"
-            :is-visible="isProcessing"
-            :can-cancel="isProcessing"
-            :start-time="processingStartTime"
-            @cancel="cancelProcessing"
+            :processing-time="
+              processingStartTime ? Date.now() - processingStartTime : 0
+            "
           />
 
           <!-- Image Preview -->
@@ -98,11 +116,12 @@
             :is-downloading="isDownloading"
             @download-all="downloadAllAsZip"
             @preview-image="openImagePreview"
+            @compare-image="openImageComparison"
           />
 
           <!-- Welcome Message -->
           <div v-if="selectedFiles.length === 0" class="text-center py-16">
-            <div class="max-w-md mx-auto">
+            <div class="max-w-2xl mx-auto">
               <div
                 class="p-6 bg-blue-100 dark:bg-blue-900/20 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center"
               >
@@ -145,9 +164,16 @@
 
     <!-- Image Preview Modal -->
     <ImagePreviewModal
-      v-if="previewImage"
+      v-if="previewImage && !comparisonImage"
       :image="previewImage"
       @close="closeImagePreview"
+    />
+
+    <!-- Image Comparison Modal -->
+    <ImageComparison
+      v-if="comparisonImage"
+      :image="comparisonImage"
+      @close="closeImageComparison"
     />
 
     <!-- Notifications -->
@@ -198,9 +224,12 @@ import {
 // Components
 import FileUpload from "./components/FileUpload.vue";
 import SettingsPanel from "./components/SettingsPanel.vue";
+import AdvancedSettings from "./components/AdvancedSettings.vue";
 import ProgressTracker from "./components/ProgressTracker.vue";
+import StatsDashboard from "./components/StatsDashboard.vue";
 import ImagePreview from "./components/ImagePreview.vue";
 import ImagePreviewModal from "./components/ImagePreviewModal.vue";
+import ImageComparison from "./components/ImageComparison.vue";
 
 // Utilities
 import { batchProcessImages, formatFileSize } from "./utils/imageProcessor.js";
@@ -226,13 +255,16 @@ const { isDark, toggleTheme, initTheme } = useTheme();
 // State
 const selectedFiles = ref([]);
 const resizeSettings = ref({});
+const advancedSettings = ref({});
 const isProcessing = ref(false);
 const processedResults = ref([]);
 const progress = ref({ completed: 0, total: 0, percentage: 0 });
 const processingStartTime = ref(null);
 const isDownloading = ref(false);
 const previewImage = ref(null);
+const comparisonImage = ref(null);
 const notifications = ref([]);
+const progressSection = ref(null);
 
 // Computed
 const canProcess = computed(() => {
@@ -308,6 +340,10 @@ const handleSettingsChanged = (settings) => {
   resizeSettings.value = settings;
 };
 
+const handleAdvancedSettingsChanged = (settings) => {
+  advancedSettings.value = settings;
+};
+
 const processImages = async () => {
   if (!canProcess.value) return;
 
@@ -336,6 +372,16 @@ const processImages = async () => {
   isProcessing.value = true;
   processingStartTime.value = Date.now();
   processedResults.value = [];
+
+  // Scroll to progress section
+  setTimeout(() => {
+    if (progressSection.value) {
+      progressSection.value.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, 100);
 
   try {
     const results = await batchProcessImages(
@@ -409,6 +455,15 @@ const openImagePreview = (result) => {
 
 const closeImagePreview = () => {
   previewImage.value = null;
+};
+
+const openImageComparison = (result) => {
+  comparisonImage.value = result;
+  previewImage.value = null;
+};
+
+const closeImageComparison = () => {
+  comparisonImage.value = null;
 };
 
 const showNotification = (message, type = "info") => {

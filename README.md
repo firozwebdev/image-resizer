@@ -10,11 +10,12 @@ A professional, feature-rich bulk image resizer built with Vue 3, Vite, and Tail
 
 ### 🚀 Core Functionality
 
-- **Bulk Image Processing** - Process up to 100 images simultaneously
+- **Bulk Image Processing** - Process up to 2000 images simultaneously with chunked processing
 - **Multiple Resize Algorithms** - Lanczos, Bicubic, Bilinear, and Nearest Neighbor
-- **Format Conversion** - Convert between JPEG, PNG, and WebP formats
+- **Format Conversion** - Convert between JPEG, PNG, WebP, TIFF, and SVG formats
 - **Quality Control** - Adjustable compression quality for optimal file sizes
 - **Aspect Ratio Preservation** - Maintain original proportions or custom dimensions
+- **Real Image Thumbnails** - See actual image previews instead of placeholders
 
 ### 🎨 User Experience
 
@@ -26,11 +27,15 @@ A professional, feature-rich bulk image resizer built with Vue 3, Vite, and Tail
 
 ### 🔧 Advanced Features
 
+- **Image Comparison** - Side-by-side, overlay, and slider comparison views
+- **Advanced Settings** - Batch rename, EXIF preservation, watermarks, color profiles
+- **Statistics Dashboard** - Detailed processing metrics and performance analytics
 - **Memory Management** - Smart memory usage detection and optimization
 - **Error Handling** - Comprehensive validation and error reporting
 - **Browser Compatibility** - Automatic feature detection and fallbacks
 - **ZIP Downloads** - Bulk download processed images as ZIP archive
 - **Performance Optimization** - Chunked processing to prevent UI blocking
+- **Auto-scroll** - Automatically scroll to progress when processing starts
 
 ## 🛠️ Tech Stack
 
@@ -80,10 +85,10 @@ npm run preview
 
 ### Supported Formats
 
-- **Input**: JPEG, PNG, WebP, GIF, BMP
+- **Input**: JPEG, PNG, WebP, GIF, BMP, TIFF, SVG
 - **Output**: JPEG, PNG, WebP
-- **Max File Size**: 50MB per image
-- **Max Files**: 100 images per batch
+- **Max File Size**: 100MB per image
+- **Max Files**: 2000 images per batch
 
 ### Resize Options
 
@@ -91,6 +96,17 @@ npm run preview
 - **Custom Dimensions**: Set specific width and/or height
 - **Aspect Ratio**: Maintain proportions or stretch to fit
 - **Background Color**: For transparent images converted to JPEG
+
+### Advanced Features
+
+- **Batch Rename**: Custom naming patterns with variables like {index}, {timestamp}, {original}
+- **EXIF Preservation**: Keep original metadata (camera info, GPS, etc.)
+- **Watermarks**: Add text watermarks with customizable position and opacity
+- **Progressive JPEG**: Better loading experience for web images
+- **Color Profiles**: Support for sRGB, Adobe RGB, Display P3, and Rec. 2020
+- **Processing Priority**: Choose between speed, balanced, or quality optimization
+- **Image Comparison**: Compare original vs processed with multiple view modes
+- **Statistics Dashboard**: Detailed analytics on processing performance and results
 
 ## 🎯 Performance Features
 

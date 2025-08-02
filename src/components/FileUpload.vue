@@ -90,34 +90,50 @@
       </div>
 
       <div
-        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto"
+        class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 max-h-80 overflow-y-auto scrollbar-thin"
       >
         <div
           v-for="(file, index) in selectedFiles"
           :key="index"
-          class="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+          class="relative group bg-gray-50 dark:bg-gray-800 rounded-lg overflow-hidden hover:shadow-md transition-all duration-200"
         >
+          <!-- Image Thumbnail -->
           <div
-            class="flex-shrink-0 w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mr-3"
+            class="aspect-square relative overflow-hidden bg-gray-100 dark:bg-gray-700"
           >
-            <PhotoIcon class="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          </div>
-          <div class="flex-1 min-w-0">
-            <p
-              class="text-sm font-medium text-gray-900 dark:text-white truncate"
+            <img
+              v-if="filePreviews[index]"
+              :src="filePreviews[index]"
+              :alt="file.name"
+              class="w-full h-full object-cover"
+              loading="lazy"
+            />
+            <div v-else class="w-full h-full flex items-center justify-center">
+              <div
+                class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"
+              ></div>
+            </div>
+
+            <!-- Remove button overlay -->
+            <button
+              @click="removeFile(index)"
+              class="absolute top-2 right-2 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
             >
-              {{ file.name }}
-            </p>
-            <p class="text-xs text-gray-500 dark:text-gray-400">
-              {{ formatFileSize(file.size) }}
-            </p>
+              <XMarkIcon class="w-3 h-3" />
+            </button>
+
+            <!-- File info overlay -->
+            <div
+              class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2"
+            >
+              <p class="text-white text-xs font-medium truncate">
+                {{ file.name }}
+              </p>
+              <p class="text-white/80 text-xs">
+                {{ formatFileSize(file.size) }}
+              </p>
+            </div>
           </div>
-          <button
-            @click="removeFile(index)"
-            class="flex-shrink-0 ml-2 text-gray-400 hover:text-red-500 transition-colors"
-          >
-            <XMarkIcon class="w-4 h-4" />
-          </button>
         </div>
       </div>
     </div>
@@ -140,6 +156,7 @@ const fileInput = ref(null);
 const isDragging = ref(false);
 const isProcessing = ref(false);
 const selectedFiles = ref([]);
+const filePreviews = ref([]);
 
 const triggerFileInput = () => {
   fileInput.value?.click();
@@ -175,8 +192,8 @@ const handleDragLeave = (event) => {
 };
 
 const processFiles = async (files) => {
-  if (files.length > 50) {
-    alert("Maximum 50 files allowed");
+  if (files.length > 1000) {
+    alert("Maximum 1000 files allowed");
     return;
   }
 
@@ -191,7 +208,7 @@ const processFiles = async (files) => {
       "image/gif",
       "image/bmp",
     ];
-    return validTypes.includes(file.type) && file.size <= 50 * 1024 * 1024; // 50MB limit
+    return validTypes.includes(file.type) && file.size <= 100 * 1024 * 1024; // 100MB limit
   });
 
   if (validFiles.length !== files.length) {
@@ -199,21 +216,66 @@ const processFiles = async (files) => {
     alert(`${invalidCount} file(s) were skipped (invalid format or too large)`);
   }
 
+  const startIndex = selectedFiles.value.length;
   selectedFiles.value = [...selectedFiles.value, ...validFiles];
+
+  // Generate previews for new files
+  await generatePreviews(validFiles, startIndex);
 
   setTimeout(() => {
     isProcessing.value = false;
     emit("files-selected", selectedFiles.value);
-  }, 500);
+  }, 100);
+};
+
+const generatePreviews = async (files, startIndex) => {
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    try {
+      const preview = await createImagePreview(file);
+      filePreviews.value[startIndex + i] = preview;
+    } catch (error) {
+      console.error("Failed to generate preview for", file.name, error);
+      // Keep loading state for failed previews
+    }
+  }
+};
+
+const createImagePreview = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        // Calculate thumbnail size (max 150px)
+        const maxSize = 150;
+        const ratio = Math.min(maxSize / img.width, maxSize / img.height);
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.8));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 };
 
 const removeFile = (index) => {
   selectedFiles.value.splice(index, 1);
+  filePreviews.value.splice(index, 1);
   emit("files-selected", selectedFiles.value);
 };
 
 const clearFiles = () => {
   selectedFiles.value = [];
+  filePreviews.value = [];
   if (fileInput.value) {
     fileInput.value.value = "";
   }

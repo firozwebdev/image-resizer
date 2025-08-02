@@ -64,14 +64,23 @@
                 <button
                   @click="downloadSingle(result)"
                   class="p-2 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-lg transition-all duration-200"
+                  title="Download"
                 >
                   <ArrowDownTrayIcon class="w-4 h-4" />
                 </button>
                 <button
                   @click="openPreview(result)"
                   class="p-2 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-lg transition-all duration-200"
+                  title="Quick Preview"
                 >
                   <EyeIcon class="w-4 h-4" />
+                </button>
+                <button
+                  @click="openComparison(result)"
+                  class="p-2 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-lg transition-all duration-200"
+                  title="Compare Original vs Processed"
+                >
+                  <ArrowsRightLeftIcon class="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -180,6 +189,7 @@ import {
   PhotoIcon,
   Squares2X2Icon,
   ListBulletIcon,
+  ArrowsRightLeftIcon,
 } from "@heroicons/vue/24/outline";
 import { formatFileSize } from "../utils/imageProcessor.js";
 import { downloadImage } from "../utils/zipUtils.js";
@@ -195,7 +205,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["download-all", "preview-image"]);
+const emit = defineEmits(["download-all", "preview-image", "compare-image"]);
 
 const viewMode = ref("grid");
 
@@ -213,5 +223,9 @@ const downloadSingle = (result) => {
 
 const openPreview = (result) => {
   emit("preview-image", result);
+};
+
+const openComparison = (result) => {
+  emit("compare-image", result);
 };
 </script>
